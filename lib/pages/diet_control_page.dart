@@ -1,8 +1,99 @@
 import 'package:flutter/material.dart';
 import 'auth_page.dart';
+import 'dart:io';
+import '../services/image_service.dart';
+import '../models/food_analysis.dart';
 
-class DietControlPage extends StatelessWidget {
+class DietControlPage extends StatefulWidget {
   const DietControlPage({super.key});
+
+  @override
+  State<DietControlPage> createState() => _DietControlPageState();
+}
+
+class _DietControlPageState extends State<DietControlPage> {
+  final ImageService _imageService = ImageService();
+  File? _selectedImage;
+  bool _isAnalyzing = false;
+  FoodAnalysis? _analysisResult;
+
+  Future<void> _pickAndAnalyzeImage() async {
+    setState(() => _isAnalyzing = true);
+
+    try {
+      // 使用 ImageService 拍攝照片
+      final imageResponse = await _imageService.captureImage();
+
+      if (!imageResponse.success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(imageResponse.error ?? '拍攝照片失敗')),
+          );
+        }
+        setState(() => _isAnalyzing = false);
+        return;
+      }
+
+      setState(() => _selectedImage = imageResponse.data);
+
+      // 使用 ImageService 分析照片
+      final analysisResponse =
+          await _imageService.analyzeFoodImage(imageResponse.data!);
+
+      if (analysisResponse.success && analysisResponse.data != null) {
+        setState(() => _analysisResult = analysisResponse.data);
+        if (mounted) {
+          _showAnalysisResult(analysisResponse.data!);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(analysisResponse.error ?? '分析失敗，請重試')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('發生錯誤，請重試')),
+        );
+      }
+    } finally {
+      setState(() => _isAnalyzing = false);
+    }
+  }
+
+  void _showAnalysisResult(FoodAnalysis analysis) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(analysis.name),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ...analysis.nutrition.map(
+              (item) => ListTile(
+                title: Text('${item.name}: ${item.value} ${item.unit}'),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('關閉'),
+          ),
+          TextButton(
+            onPressed: () {
+              // TODO: 這裡可以加入儲存記錄的功能
+              Navigator.pop(context);
+            },
+            child: const Text('儲存記錄'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +234,7 @@ class DietControlPage extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: _pickAndAnalyzeImage,
               icon: const Icon(Icons.add, color: Color(0xFF4A90E2)),
               label: Text(
                 '添加飲食記錄',

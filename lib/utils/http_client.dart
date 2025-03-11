@@ -1,5 +1,5 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:dio/dio.dart';
 import '../config/api_config.dart';
 
 class ApiResponse<T> {
@@ -7,101 +7,119 @@ class ApiResponse<T> {
   final T? data;
   final String? error;
 
-  ApiResponse({required this.success, this.data, this.error});
+  ApiResponse({
+    required this.success,
+    this.data,
+    this.error,
+  });
+
+  factory ApiResponse.error(String message) {
+    return ApiResponse(
+      success: false,
+      error: message,
+    );
+  }
 }
 
 class HttpClient {
-  static final HttpClient _instance = HttpClient._internal();
+  final Dio _dio;
   String? _token;
 
-  factory HttpClient() {
-    return _instance;
+  HttpClient() : _dio = Dio() {
+    _dio.options.baseUrl = ApiConfig.baseUrl;
+    _dio.options.connectTimeout = const Duration(seconds: 5);
+    _dio.options.receiveTimeout = const Duration(seconds: 3);
+    _dio.options.headers = {
+      'Content-Type': 'application/json',
+    };
   }
-
-  HttpClient._internal();
 
   void setToken(String token) {
     _token = token;
+    _dio.options.headers['Authorization'] = 'Bearer $token';
   }
 
   void clearToken() {
     _token = null;
+    _dio.options.headers.remove('Authorization');
   }
 
-  Map<String, String> get _headers {
-    final headers = {
-      'Content-Type': 'application/json',
-    };
-
-    if (_token != null) {
-      headers['Authorization'] = 'Bearer $_token';
-    }
-
-    return headers;
-  }
-
-  Future<ApiResponse<T>> get<T>(String endpoint,
-      {Map<String, dynamic>? queryParams}) async {
+  Future<ApiResponse<T>> get<T>(String path) async {
     try {
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint')
-          .replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _headers);
+      final response = await _dio.get<dynamic>(path);
       return _handleResponse<T>(response);
     } catch (e) {
-      return ApiResponse(success: false, error: e.toString());
+      return ApiResponse<T>.error(e.toString());
     }
   }
 
-  Future<ApiResponse<T>> post<T>(String endpoint, {dynamic body}) async {
+  Future<ApiResponse<T>> post<T>(
+    String path, {
+    dynamic body,
+    Map<String, dynamic>? queryParameters,
+  }) async {
     try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}$endpoint'),
-        headers: _headers,
-        body: jsonEncode(body),
+      final response = await _dio.post<dynamic>(
+        path,
+        data: body,
+        queryParameters: queryParameters,
       );
       return _handleResponse<T>(response);
     } catch (e) {
-      return ApiResponse(success: false, error: e.toString());
+      return ApiResponse<T>.error(e.toString());
     }
   }
 
-  Future<ApiResponse<T>> put<T>(String endpoint, {dynamic body}) async {
+  Future<ApiResponse<T>> put<T>(String path, {dynamic body}) async {
     try {
-      final response = await http.put(
-        Uri.parse('${ApiConfig.baseUrl}$endpoint'),
-        headers: _headers,
-        body: jsonEncode(body),
+      final response = await _dio.put<dynamic>(
+        path,
+        data: body,
       );
       return _handleResponse<T>(response);
     } catch (e) {
-      return ApiResponse(success: false, error: e.toString());
+      return ApiResponse<T>.error(e.toString());
     }
   }
 
-  Future<ApiResponse<T>> delete<T>(String endpoint) async {
+  Future<ApiResponse<T>> delete<T>(String path) async {
     try {
-      final response = await http.delete(
-        Uri.parse('${ApiConfig.baseUrl}$endpoint'),
-        headers: _headers,
-      );
+      final response = await _dio.delete<dynamic>(path);
       return _handleResponse<T>(response);
     } catch (e) {
-      return ApiResponse(success: false, error: e.toString());
+      return ApiResponse<T>.error(e.toString());
     }
   }
 
-  ApiResponse<T> _handleResponse<T>(http.Response response) {
-    final responseData = jsonDecode(response.body);
+  Future<FormData> createMultipartFormData(Map<String, String> files) async {
+    final formData = FormData();
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return ApiResponse(success: true, data: responseData as T);
-    } else {
-      final errorMessage =
-          responseData is Map ? responseData['error'] : responseData.toString();
-      return ApiResponse(
-        success: false,
-        error: errorMessage,
+    for (final entry in files.entries) {
+      formData.files.add(
+        MapEntry(
+          entry.key,
+          await MultipartFile.fromFile(entry.value),
+        ),
       );
     }
+
+    return formData;
+  }
+
+  ApiResponse<T> _handleResponse<T>(Response<dynamic> response) {
+    if (response.statusCode == 200) {
+      return ApiResponse<T>(
+        success: true,
+        data: response.data as T,
+      );
+    }
+
+    String errorMessage = '請求失敗';
+    if (response.data is Map) {
+      errorMessage =
+          (response.data as Map)['message']?.toString() ?? errorMessage;
+    }
+
+    return ApiResponse<T>.error(errorMessage);
   }
 }
