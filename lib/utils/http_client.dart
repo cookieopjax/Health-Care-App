@@ -27,8 +27,8 @@ class HttpClient {
 
   HttpClient() : _dio = Dio() {
     _dio.options.baseUrl = ApiConfig.baseUrl;
-    _dio.options.connectTimeout = const Duration(seconds: 5);
-    _dio.options.receiveTimeout = const Duration(seconds: 3);
+    _dio.options.connectTimeout = const Duration(seconds: 30);
+    _dio.options.receiveTimeout = const Duration(seconds: 30);
     _dio.options.headers = {
       'Content-Type': 'application/json',
     };

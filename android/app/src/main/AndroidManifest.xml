@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 網路權限 -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- 相機權限 -->
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- 存儲權限 -->
