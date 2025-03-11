@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 import 'diet_control_page.dart';
 
 class AuthPage extends StatefulWidget {
@@ -10,16 +11,18 @@ class AuthPage extends StatefulWidget {
 
 class _AuthPageState extends State<AuthPage> {
   bool _isLogin = true;
+  bool _isLoading = false;
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _authService = AuthService();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
@@ -29,15 +32,77 @@ class _AuthPageState extends State<AuthPage> {
     });
   }
 
-  void _submit() {
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // 直接導向到主頁面
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const DietControlPage()),
-    );
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      if (_isLogin) {
+        // 登入
+        final response = await _authService.login(
+          _emailController.text,
+          _passwordController.text,
+        );
+
+        if (response.success) {
+          // 登入成功，導向主頁面
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const DietControlPage()),
+            );
+          }
+        } else {
+          if (mounted) {
+            print('response.error: ${response.error}');
+            _showError(response.error ?? '登入失敗');
+          }
+        }
+      } else {
+        // 註冊
+        final response = await _authService.register(
+          _usernameController.text,
+          _emailController.text,
+          _passwordController.text,
+        );
+
+        if (response.success) {
+          // 註冊成功，導向主頁面
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const DietControlPage()),
+            );
+          }
+        } else {
+          if (mounted) {
+            _showError(response.error ?? '註冊失敗');
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError(e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -65,6 +130,27 @@ class _AuthPageState extends State<AuthPage> {
                   key: _formKey,
                   child: Column(
                     children: [
+                      // 使用者名稱欄位（僅在註冊時顯示）
+                      if (!_isLogin) ...[
+                        TextFormField(
+                          controller: _usernameController,
+                          decoration: InputDecoration(
+                            labelText: '使用者名稱',
+                            prefixIcon: const Icon(Icons.person),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return '請輸入使用者名稱';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
                       // 電子郵件欄位
                       TextFormField(
                         controller: _emailController,
@@ -111,34 +197,12 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // 確認密碼欄位（僅在註冊時顯示）
-                      if (!_isLogin) ...[
-                        TextFormField(
-                          controller: _confirmPasswordController,
-                          decoration: InputDecoration(
-                            labelText: '確認密碼',
-                            prefixIcon: const Icon(Icons.lock),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          obscureText: true,
-                          validator: (value) {
-                            if (value != _passwordController.text) {
-                              return '密碼不一致';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
                       // 提交按鈕
                       SizedBox(
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: _submit,
+                          onPressed: _isLoading ? null : _submit,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Theme.of(context).primaryColor,
                             foregroundColor: Colors.white,
@@ -146,19 +210,28 @@ class _AuthPageState extends State<AuthPage> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Text(
-                            _isLogin ? '登入' : '註冊',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  _isLogin ? '登入' : '註冊',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
                       ),
 
                       // 切換登入/註冊模式
                       TextButton(
-                        onPressed: _switchAuthMode,
+                        onPressed: _isLoading ? null : _switchAuthMode,
                         child: Text(
                           _isLogin ? '還沒有帳號？點擊註冊' : '已經有帳號？點擊登入',
                           style: TextStyle(
