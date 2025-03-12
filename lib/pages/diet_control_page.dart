@@ -16,6 +16,7 @@ class _DietControlPageState extends State<DietControlPage> {
   File? _selectedImage;
   bool _isAnalyzing = false;
   FoodAnalysis? _analysisResult;
+  int _currentIndex = 0;
 
   Future<void> _pickAndAnalyzeImage() async {
     setState(() => _isAnalyzing = true);
@@ -99,9 +100,10 @@ class _DietControlPageState extends State<DietControlPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          '飲食控制',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        title: Text(
+          _currentIndex == 0 ? '飲食控制' : '飲食記錄',
+          style:
+              const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -109,7 +111,6 @@ class _DietControlPageState extends State<DietControlPage> {
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.black),
             onPressed: () {
-              // 返回登入頁面
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (context) => const AuthPage()),
               );
@@ -120,23 +121,52 @@ class _DietControlPageState extends State<DietControlPage> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDailySummaryCard(),
-              const SizedBox(height: 20),
-              _buildAddFoodSection(),
-              const SizedBox(height: 20),
-              const Text(
-                '飲食記錄',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Expanded(child: _buildFoodList()),
-            ],
-          ),
+          child: _currentIndex == 0 ? _buildMainPage() : _buildFoodRecordPage(),
         ),
       ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: '主頁',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.book),
+            label: '飲食記錄',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainPage() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildDailySummaryCard(),
+        const SizedBox(height: 20),
+        _buildAddFoodSection(),
+      ],
+    );
+  }
+
+  Widget _buildFoodRecordPage() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '飲食記錄',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        Expanded(child: _buildFoodList()),
+      ],
     );
   }
 
