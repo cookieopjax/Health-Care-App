@@ -18,40 +18,34 @@ class _DietControlPageState extends State<DietControlPage> {
   FoodAnalysis? _analysisResult;
   int _currentIndex = 0;
 
-  Future<void> _pickAndAnalyzeImage() async {
+  Future<void> _captureImage() async {
     setState(() => _isAnalyzing = true);
 
     try {
-      // 使用 ImageService 拍攝照片
       final imageResponse = await _imageService.captureImage();
-
-      if (!imageResponse.success) {
+      if (imageResponse.data == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(imageResponse.error ?? '拍攝照片失敗')),
           );
         }
-        setState(() => _isAnalyzing = false);
         return;
       }
 
-      setState(() => _selectedImage = imageResponse.data);
-
-      // 使用 ImageService 分析照片
       final analysisResponse =
           await _imageService.analyzeFoodImage(imageResponse.data!);
-
-      if (analysisResponse.success && analysisResponse.data != null) {
-        setState(() => _analysisResult = analysisResponse.data);
-        if (mounted) {
-          _showAnalysisResult(analysisResponse.data!);
-        }
-      } else {
+      if (!analysisResponse.success) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(analysisResponse.error ?? '分析失敗，請重試')),
           );
         }
+        return;
+      }
+
+      setState(() => _analysisResult = analysisResponse.data);
+      if (mounted && analysisResponse.data != null) {
+        _showAnalysisResult(analysisResponse.data!);
       }
     } catch (e) {
       if (mounted) {
@@ -60,7 +54,51 @@ class _DietControlPageState extends State<DietControlPage> {
         );
       }
     } finally {
-      setState(() => _isAnalyzing = false);
+      if (mounted) {
+        setState(() => _isAnalyzing = false);
+      }
+    }
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    setState(() => _isAnalyzing = true);
+
+    try {
+      final imageResponse = await _imageService.pickImageFromGallery();
+      if (imageResponse.data == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(imageResponse.error ?? '選擇照片失敗')),
+          );
+        }
+        return;
+      }
+
+      final analysisResponse =
+          await _imageService.analyzeFoodImage(imageResponse.data!);
+      if (!analysisResponse.success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(analysisResponse.error ?? '分析失敗，請重試')),
+          );
+        }
+        return;
+      }
+
+      setState(() => _analysisResult = analysisResponse.data);
+      if (mounted && analysisResponse.data != null) {
+        _showAnalysisResult(analysisResponse.data!);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('發生錯誤，請重試')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isAnalyzing = false);
+      }
     }
   }
 
@@ -248,42 +286,46 @@ class _DietControlPageState extends State<DietControlPage> {
   }
 
   Widget _buildAddFoodSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          const Text('添加今日飲食'),
-          const SizedBox(height: 16),
-          const Icon(Icons.camera_alt, size: 48, color: Colors.grey),
-          const Text('點擊上傳食物照片'),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _pickAndAnalyzeImage,
-              icon: const Icon(Icons.add, color: Color(0xFF4A90E2)),
-              label: const Text(
-                '添加飲食記錄',
-                style: TextStyle(
-                  color: Color.fromARGB(255, 0, 46, 99),
-                  fontWeight: FontWeight.bold,
+    return InkWell(
+      onTap: _captureImage,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            const Text('新增今日飲食'),
+            const SizedBox(height: 16),
+            const Icon(Icons.camera_alt, size: 48, color: Colors.grey),
+            const Text('點擊直接拍攝食物照片'),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _pickImageFromGallery,
+                icon: const Icon(Icons.photo_library, color: Color(0xFF4A90E2)),
+                label: const Text(
+                  '從相簿選擇照片',
+                  style: TextStyle(
+                    color: Color.fromARGB(255, 0, 46, 99),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                elevation: 1,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
