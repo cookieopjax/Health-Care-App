@@ -286,47 +286,80 @@ class _DietControlPageState extends State<DietControlPage> {
   }
 
   Widget _buildAddFoodSection() {
-    return InkWell(
-      onTap: _captureImage,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
+    return Stack(
+      children: [
+        InkWell(
+          onTap: _isAnalyzing ? null : _captureImage,
           borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            const Text('新增今日飲食'),
-            const SizedBox(height: 16),
-            const Icon(Icons.camera_alt, size: 48, color: Colors.grey),
-            const Text('點擊直接拍攝食物照片'),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _pickImageFromGallery,
-                icon: const Icon(Icons.photo_library, color: Color(0xFF4A90E2)),
-                label: const Text(
-                  '從相簿選擇照片',
-                  style: TextStyle(
-                    color: Color.fromARGB(255, 0, 46, 99),
-                    fontWeight: FontWeight.bold,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                const Text('新增今日飲食'),
+                const SizedBox(height: 16),
+                const Icon(Icons.camera_alt, size: 48, color: Colors.grey),
+                const Text('點擊直接拍攝食物照片'),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _isAnalyzing ? null : _pickImageFromGallery,
+                    icon: const Icon(Icons.photo_library,
+                        color: Color(0xFF4A90E2)),
+                    label: const Text(
+                      '從相簿選擇照片',
+                      style: TextStyle(
+                        color: Color.fromARGB(255, 0, 46, 99),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      elevation: 1,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                   ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  elevation: 1,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+              ],
+            ),
+          ),
+        ),
+        if (_isAnalyzing)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      '正在分析照片...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
   }
 
