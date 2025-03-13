@@ -35,14 +35,14 @@ class FoodAnalysis {
   factory FoodAnalysis.fromJson(Map<String, dynamic> json) {
     print('解析 FoodAnalysis JSON: $json'); // Debug
 
-    final analysisData = json['data']['analysis'] as Map<String, dynamic>;
+    final analysisData = json['analysis'] as Map<String, dynamic>;
 
     return FoodAnalysis(
       name: analysisData['name'] as String,
       nutrition: (analysisData['nutrition'] as List)
           .map((item) => NutritionInfo.fromJson(item as Map<String, dynamic>))
           .toList(),
-      imageUrl: json['data']['image_url'] as String,
+      imageUrl: json['image_url'] as String,
     );
   }
 

@@ -266,7 +266,7 @@ class _DietControlPageState extends State<DietControlPage> {
             child: ElevatedButton.icon(
               onPressed: _pickAndAnalyzeImage,
               icon: const Icon(Icons.add, color: Color(0xFF4A90E2)),
-              label: Text(
+              label: const Text(
                 '添加飲食記錄',
                 style: TextStyle(
                   color: Color.fromARGB(255, 0, 46, 99),

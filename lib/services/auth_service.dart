@@ -1,3 +1,4 @@
+import 'dart:developer';
 import '../models/auth_model.dart';
 import '../utils/http_client.dart';
 import '../config/api_config.dart';
@@ -17,6 +18,7 @@ class AuthService {
 
     if (response.success && response.data != null) {
       print('登入成功，解析回應'); // Debug
+      log('response.data: ${response.data}');
       final authResponse = AuthResponse.fromJson(response.data!);
       print('設置 Token: ${authResponse.token}'); // Debug
       _httpClient.setToken(authResponse.token);

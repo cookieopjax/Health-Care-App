@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 class AuthResponse {
   final String token;
   final User user;

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:developer';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 import '../config/api_config.dart';
@@ -184,9 +185,9 @@ class HttpClient {
     }
 
     String errorMessage = '請求失敗';
+    log('response.data: ${response.data}');
     if (response.data is Map) {
-      errorMessage =
-          (response.data as Map)['message']?.toString() ?? errorMessage;
+      errorMessage = (response.data as Map)['msg']?.toString() ?? errorMessage;
     }
 
     return ApiResponse<T>.error(errorMessage);
