@@ -13,8 +13,11 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: '飲食控制',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: Colors.grey[100],
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF4A90E2),
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
       ),
       home: const AuthPage(),
     );
