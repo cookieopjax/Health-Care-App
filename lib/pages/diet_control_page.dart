@@ -136,10 +136,7 @@ class _DietControlPageState extends State<DietControlPage> {
     );
   }
 
-  Future<void> _saveMealRecord(FoodAnalysis analysis) async {
-    final mealType = await _showMealTypeDialog();
-    if (mealType == null) return;
-
+  Future<void> _saveMealRecord(FoodAnalysis analysis, String mealType) async {
     try {
       print('完整物件：$analysis');
       print('營養成分列表：');
@@ -181,30 +178,188 @@ class _DietControlPageState extends State<DietControlPage> {
 
   void _showAnalysisResult(FoodAnalysis analysis) {
     print('分析結果：$analysis');
-    showDialog(
+    String selectedMealType = 'lunch'; // 預設值
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(analysis.name),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ...analysis.nutrition.entries.map(
-              (entry) => ListTile(
-                title: Text('${entry.key}: ${entry.value}'),
-              ),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) => Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Text(
+                  analysis.name,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // 餐食類型選擇
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildMealTypeButton('早餐', 'breakfast', selectedMealType, (value) {
+                        setState(() => selectedMealType = value);
+                      }),
+                      _buildMealTypeButton('午餐', 'lunch', selectedMealType, (value) {
+                        setState(() => selectedMealType = value);
+                      }),
+                      _buildMealTypeButton('晚餐', 'dinner', selectedMealType, (value) {
+                        setState(() => selectedMealType = value);
+                      }),
+                      _buildMealTypeButton('點心', 'snack', selectedMealType, (value) {
+                        setState(() => selectedMealType = value);
+                      }),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    children: [
+                      _buildNutritionItem('熱量', analysis.nutrition['calories'] ?? 0, 'kcal'),
+                      _buildNutritionItem('蛋白質', analysis.nutrition['protein'] ?? 0, 'g'),
+                      _buildNutritionItem('碳水化合物', analysis.nutrition['carbs'] ?? 0, 'g'),
+                      _buildNutritionItem('脂肪', analysis.nutrition['fat'] ?? 0, 'g'),
+                      _buildNutritionItem('膳食纖維', analysis.nutrition['fiber'] ?? 0, 'g'),
+                      _buildNutritionItem('糖分', analysis.nutrition['sugar'] ?? 0, 'g'),
+                      _buildNutritionItem('鈉', analysis.nutrition['sodium'] ?? 0, 'mg'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => _saveMealRecord(analysis, selectedMealType),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: const Color(0xFF4A90E2),
+                    ),
+                    child: const Text(
+                      '儲存記錄',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('關閉'),
           ),
-          TextButton(
-            onPressed: () => _saveMealRecord(analysis),
-            child: const Text('儲存記錄'),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNutritionItem(String label, double value, String unit) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
         ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '$value $unit',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline),
+                onPressed: () {
+                  setState(() {
+                    _analysisResult?.nutrition[label.toLowerCase()] = (value - 1).clamp(0, double.infinity);
+                  });
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline),
+                onPressed: () {
+                  setState(() {
+                    _analysisResult?.nutrition[label.toLowerCase()] = value + 1;
+                  });
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMealTypeButton(String label, String value, String selected, Function(String) onSelect) {
+    final isSelected = selected == value;
+    return GestureDetector(
+      onTap: () => onSelect(value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF4A90E2) : Colors.grey[200],
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.black87,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
       ),
     );
   }
