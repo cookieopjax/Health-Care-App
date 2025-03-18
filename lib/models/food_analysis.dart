@@ -23,7 +23,7 @@ class NutritionInfo {
 
 class FoodAnalysis {
   final String name;
-  final List<NutritionInfo> nutrition;
+  final Map<String, double> nutrition;
   final String imageUrl;
 
   FoodAnalysis({
@@ -36,12 +36,19 @@ class FoodAnalysis {
     print('解析 FoodAnalysis JSON: $json'); // Debug
 
     final analysisData = json['analysis'] as Map<String, dynamic>;
+    final nutritionData = analysisData['nutrition'] as Map<String, dynamic>;
 
     return FoodAnalysis(
       name: analysisData['name'] as String,
-      nutrition: (analysisData['nutrition'] as List)
-          .map((item) => NutritionInfo.fromJson(item as Map<String, dynamic>))
-          .toList(),
+      nutrition: {
+        'calories': nutritionData['calories'].toDouble(),
+        'protein': nutritionData['protein'].toDouble(),
+        'carbs': nutritionData['carbs'].toDouble(),
+        'fat': nutritionData['fat'].toDouble(),
+        'fiber': nutritionData['fiber'].toDouble(),
+        'sugar': nutritionData['sugar'].toDouble(),
+        'sodium': nutritionData['sodium'].toDouble(),
+      },
       imageUrl: json['image_url'] as String,
     );
   }

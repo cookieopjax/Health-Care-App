@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'auth_page.dart';
 import 'dart:io';
 import '../services/image_service.dart';
+import '../services/meal_record_service.dart';
 import '../models/food_analysis.dart';
+import 'dart:developer' as developer;
+import 'dart:convert';
 
 class DietControlPage extends StatefulWidget {
   const DietControlPage({super.key});
@@ -13,6 +16,7 @@ class DietControlPage extends StatefulWidget {
 
 class _DietControlPageState extends State<DietControlPage> {
   final ImageService _imageService = ImageService();
+  final MealRecordService _mealRecordService = MealRecordService();
   File? _selectedImage;
   bool _isAnalyzing = false;
   FoodAnalysis? _analysisResult;
@@ -102,7 +106,81 @@ class _DietControlPageState extends State<DietControlPage> {
     }
   }
 
+  Future<String?> _showMealTypeDialog() async {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('選擇餐食類型'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('早餐'),
+              onTap: () => Navigator.pop(context, 'breakfast'),
+            ),
+            ListTile(
+              title: const Text('午餐'),
+              onTap: () => Navigator.pop(context, 'lunch'),
+            ),
+            ListTile(
+              title: const Text('晚餐'),
+              onTap: () => Navigator.pop(context, 'dinner'),
+            ),
+            ListTile(
+              title: const Text('點心'),
+              onTap: () => Navigator.pop(context, 'snack'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveMealRecord(FoodAnalysis analysis) async {
+    final mealType = await _showMealTypeDialog();
+    if (mealType == null) return;
+
+    try {
+      print('完整物件：$analysis');
+      print('營養成分列表：');
+      analysis.nutrition.forEach((key, value) {
+        print('$key: $value');
+      });
+      // TODO: 這裡需要先上傳圖片到伺服器，取得 image_url
+      // 暫時使用一個假造的 URL
+      const imageUrl = 'https://example.com/food-image.jpg';
+
+      final response = await _mealRecordService.createMealRecord(
+        analysis: analysis,
+        imageUrl: imageUrl,
+        mealType: mealType,
+      );
+
+      if (response.success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('儲存成功！')),
+          );
+          Navigator.pop(context); // 關閉分析結果對話框
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(response.error ?? '儲存失敗')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('發生錯誤：$e')),
+        );
+      }
+    }
+  }
+
   void _showAnalysisResult(FoodAnalysis analysis) {
+    print('分析結果：$analysis');
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -110,9 +188,9 @@ class _DietControlPageState extends State<DietControlPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ...analysis.nutrition.map(
-              (item) => ListTile(
-                title: Text('${item.name}: ${item.value} ${item.unit}'),
+            ...analysis.nutrition.entries.map(
+              (entry) => ListTile(
+                title: Text('${entry.key}: ${entry.value}'),
               ),
             ),
           ],
@@ -123,10 +201,7 @@ class _DietControlPageState extends State<DietControlPage> {
             child: const Text('關閉'),
           ),
           TextButton(
-            onPressed: () {
-              // TODO: 這裡可以加入儲存記錄的功能
-              Navigator.pop(context);
-            },
+            onPressed: () => _saveMealRecord(analysis),
             child: const Text('儲存記錄'),
           ),
         ],

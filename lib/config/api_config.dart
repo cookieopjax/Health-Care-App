@@ -39,6 +39,7 @@ class ApiConfig {
 
   // 食物分析相關端點
   static const String foodAnalyze = '/api/food/analyze';
+  static const String mealRecordCreate = '/api/meal-records/create';
 
   // 可以添加更多 API 端點常數
 }
